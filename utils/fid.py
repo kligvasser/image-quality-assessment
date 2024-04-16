@@ -31,6 +31,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import os
 import pathlib
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
@@ -46,23 +47,28 @@ try:
     from tqdm import tqdm
 except ImportError:
     # If not tqdm is not available, provide a mock version of it
-    def tqdm(x): return x
+    def tqdm(x):
+        return x
+
 
 from models.inception import InceptionV3
 from utils.core import imresize
 
 parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-parser.add_argument('path', type=str, nargs=2,
-                    help=('Path to the generated images or '
-                          'to .npz statistic files'))
-parser.add_argument('--batch-size', type=int, default=50,
-                    help='Batch size to use')
-parser.add_argument('--dims', type=int, default=2048,
-                    choices=list(InceptionV3.BLOCK_INDEX_BY_DIM),
-                    help=('Dimensionality of Inception features to use. '
-                          'By default, uses pool3 features'))
-parser.add_argument('-c', '--gpu', default='', type=str,
-                    help='GPU to use (leave blank for CPU only)')
+parser.add_argument(
+    'path', type=str, nargs=2, help=('Path to the generated images or ' 'to .npz statistic files')
+)
+parser.add_argument('--batch-size', type=int, default=50, help='Batch size to use')
+parser.add_argument(
+    '--dims',
+    type=int,
+    default=2048,
+    choices=list(InceptionV3.BLOCK_INDEX_BY_DIM),
+    help=('Dimensionality of Inception features to use. ' 'By default, uses pool3 features'),
+)
+parser.add_argument(
+    '-c', '--gpu', default='', type=str, help='GPU to use (leave blank for CPU only)'
+)
 
 
 def imread(filename, resize=True):
@@ -98,8 +104,9 @@ def get_activations(files, model, batch_size=50, dims=2048, cuda=False, verbose=
     model.eval()
 
     if batch_size > len(files):
-        print(('Warning: batch size is bigger than the data size. '
-               'Setting batch size to data size'))
+        print(
+            ('Warning: batch size is bigger than the data size. ' 'Setting batch size to data size')
+        )
         batch_size = len(files)
 
     pred_arr = np.empty((len(files), dims))
@@ -134,18 +141,20 @@ def get_activations(files, model, batch_size=50, dims=2048, cuda=False, verbose=
 
     return pred_arr
 
+
 def get_activations_from_tensor(tensor, model, resize=True):
     if resize:
         tensor = imresize(tensor, sides=[299, 299])
-    
+
     pred = model(tensor)[0]
 
     if pred.size(2) != 1 or pred.size(3) != 1:
-            pred = adaptive_avg_pool2d(pred, output_size=(1, 1))
+        pred = adaptive_avg_pool2d(pred, output_size=(1, 1))
 
     pred = pred.cpu().data.numpy().reshape(pred.size(0), -1)
 
     return pred
+
 
 def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
     """Numpy implementation of the Frechet Distance.
@@ -175,18 +184,17 @@ def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
     sigma1 = np.atleast_2d(sigma1)
     sigma2 = np.atleast_2d(sigma2)
 
-    assert mu1.shape == mu2.shape, \
-        'Training and test mean vectors have different lengths'
-    assert sigma1.shape == sigma2.shape, \
-        'Training and test covariances have different dimensions'
+    assert mu1.shape == mu2.shape, 'Training and test mean vectors have different lengths'
+    assert sigma1.shape == sigma2.shape, 'Training and test covariances have different dimensions'
 
     diff = mu1 - mu2
 
     # Product might be almost singular
     covmean, _ = linalg.sqrtm(sigma1.dot(sigma2), disp=False)
     if not np.isfinite(covmean).all():
-        msg = ('fid calculation produces singular product; '
-               'adding %s to diagonal of cov estimates') % eps
+        msg = (
+            'fid calculation produces singular product; ' 'adding %s to diagonal of cov estimates'
+        ) % eps
         print(msg)
         offset = np.eye(sigma1.shape[0]) * eps
         covmean = linalg.sqrtm((sigma1 + offset).dot(sigma2 + offset))
@@ -200,11 +208,12 @@ def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
 
     tr_covmean = np.trace(covmean)
 
-    return (diff.dot(diff) + np.trace(sigma1) +
-            np.trace(sigma2) - 2 * tr_covmean)
+    return diff.dot(diff) + np.trace(sigma1) + np.trace(sigma2) - 2 * tr_covmean
 
 
-def calculate_activation_statistics(files, model, batch_size=50, dims=2048, cuda=False, verbose=False):
+def calculate_activation_statistics(
+    files, model, batch_size=50, dims=2048, cuda=False, verbose=False
+):
     """Calculation of the statistics used by the FID.
     Params:
     -- files       : List of image files paths
@@ -240,11 +249,13 @@ def _compute_statistics_of_path(path, model, batch_size, dims, cuda):
 
     return m, s
 
+
 def _compute_statistics_of_tensor(tensor, model, resize=True):
     act = get_activations_from_tensor(tensor, model, resize)
     mu = np.mean(act, axis=0)
     sigma = np.cov(act, rowvar=False)
     return mu, sigma
+
 
 def calculate_fid_given_paths(paths, batch_size, cuda, dims):
     """Calculates the FID of two paths"""
@@ -264,6 +275,7 @@ def calculate_fid_given_paths(paths, batch_size, cuda, dims):
 
     return fid_value
 
+
 def calculate_fid_given_tensors(tensor1, tensor2, dims=2048):
     block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
 
@@ -276,12 +288,10 @@ def calculate_fid_given_tensors(tensor1, tensor2, dims=2048):
 
     return fid_value
 
+
 if __name__ == '__main__':
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 
-    fid_value = calculate_fid_given_paths(args.path,
-                                          args.batch_size,
-                                          args.gpu != '',
-                                          args.dims)
+    fid_value = calculate_fid_given_paths(args.path, args.batch_size, args.gpu != '', args.dims)
     print('FID: ', fid_value)

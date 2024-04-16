@@ -34,7 +34,7 @@ cd ./image-quality-assessment
 python -m pip install -r requirements.txt
 ```
 
-This code tested in PyTorch 1.8.1.
+This code was tested in PyTorch 1.8.1.
 
 ### Running evaluation
 Run the following command:
